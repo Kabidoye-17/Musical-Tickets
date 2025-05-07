@@ -10,7 +10,6 @@ import NotificationModal from '../Components/NotificationModal';
 
 
 
-
 function WhoAmI() {
 
     console.log("Environment variables:", {
@@ -48,7 +47,9 @@ function WhoAmI() {
             if (role) {
                 nav(`/view-wallet-${role}`);
             } else {
-                nav("/view-wallet-customer");
+                nav('/view-wallet-customer', { 
+                    state: { walletAddress: walletAddress }
+                });
             }
 
         } catch (error) {
@@ -65,7 +66,7 @@ function WhoAmI() {
 
     
     return(
-        <>
+            <>
         <PageTitle>Who Am I?</PageTitle>
          <PasswordInput 
                 id="walletAddress"
@@ -79,7 +80,7 @@ function WhoAmI() {
                 {isLoading ? "Loading..." : "Enter"}
             </ActionButton>
             {showNotification && <NotificationModal message={notification} closeModal={closeNotification}/>}
-        </>
+            </>
     )
 }
 

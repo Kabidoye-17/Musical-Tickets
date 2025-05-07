@@ -15,7 +15,8 @@ const MainContainer = styled.div`
   flex-direction: column;
   justify-content: start;
   align-items: center;
-  height: 100%;
+  min-height: fit-content;
+  height: 100vh;
   width: 100%;
   gap: 20px;
   background-color: #FCECDD;

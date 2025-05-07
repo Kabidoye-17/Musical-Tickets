@@ -1,22 +1,36 @@
 import DetailsBox from '../Components/DetailsBox';
 import NotificationModal from '../Components/NotificationModal';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import styled from 'styled-components';
 import Web3 from 'web3';
-import { ActionButton, PageTitle, PasswordInput} from './CreateWallet';
+import { ActionButton, PageTitle, PasswordInput, SubTitle} from './CreateWallet';
 
 function PurchaserViewWallet() {
-    const [walletAddress, setWalletAddress] = useState("");
+    const location = useLocation();
+    const walletAddress = location.state?.walletAddress;
     const [notification, setNotification] = useState("");
     const [showNotification, setShowNotification] = useState(false);
     const [ticketBalance, setTicketBalance] = useState("-");
     const [cryptoBalance, setCryptoBalance] = useState("-");
     const [isLoading, setIsLoading] = useState(false);
 
-    const displayWalletDetails = (walletAddress) => {
-        const web3 = new Web3("https://sepolia.infura.io/v3/6f6f1ab124ff4449869f5df930ae6fd4");
+
     
-        if (web3.utils.isAddress(walletAddress)){
+    useEffect(() => {
+        // Skip if no wallet address is provided
+        if (!walletAddress) {
+            setNotification({
+                success: false,
+                message: "No wallet address provided"
+            });
+            setShowNotification(true);
+            return;
+        }
+
+        const web3 = new Web3("https://sepolia.infura.io/v3/6f6f1ab124ff4449869f5df930ae6fd4");
+
+        if (web3.utils.isAddress(walletAddress)) {
             setIsLoading(true);
             
             // Fetch ETH balance
@@ -45,7 +59,7 @@ function PurchaserViewWallet() {
             setShowNotification(true);
             return;
         }
-    }
+    }, [walletAddress]);
 
     const closeNotification = () =>{
         setShowNotification(false);
@@ -53,18 +67,7 @@ function PurchaserViewWallet() {
   return (
     <>
     <PageTitle>Welcome Customer</PageTitle>
-    <PageTitle>View Wallet</PageTitle>
-    <PasswordInput 
-        id="walletAddress"
-        onChange={(e) => setWalletAddress(e.target.value)} 
-        placeholder="Enter your wallet address" 
-    />
-    <ActionButton 
-        onClick={() => displayWalletDetails(walletAddress)}
-        disabled={isLoading}
-    >
-        {isLoading ? "Loading..." : "Enter"}
-    </ActionButton>
+    <SubTitle>View Wallet</SubTitle>
     <DetailsBox title="SETH Balance" value={cryptoBalance + " SETH"} copyEnabled={false}/>
     <DetailsBox title="Ticket Balance" value={`${ticketBalance} ticket(s)`} copyEnabled={false}/>
     {showNotification && <NotificationModal message={notification} closeModal={closeNotification}/>}
