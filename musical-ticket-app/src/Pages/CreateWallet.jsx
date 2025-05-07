@@ -11,7 +11,7 @@ export const PageTitle = styled.h1`
     margin: 0;
 `;
 
-const PasswordInput = styled.input`
+export const PasswordInput = styled.input`
     width: 30%;
     height: 30px;
     border-radius: 5px;
@@ -118,9 +118,9 @@ function CreateWallet() {
                 onChange={(e) => setPassword(e.target.value)}
             />
             <ActionButton onClick={handleCreateWallet}>Create Wallet</ActionButton>
-            <DetailsBox title={"Wallet Address"} value={walletAddress}/>
-            <DetailsBox title={"Private Key"} value={privateKey}/>
-            <DetailsBox title={"KeyStore File"} value={JSON.stringify(keyStoreFile)}/> 
+            <DetailsBox title={"Wallet Address"} copyEnabled={true} value={walletAddress}/>
+            <DetailsBox title={"Private Key"}  copyEnabled={true} value={privateKey}/>
+            <DetailsBox title={"KeyStore File"}  copyEnabled={true} value={JSON.stringify(keyStoreFile)}/> 
             <ActionButton onClick={downloadKeystore}>Download Keystore File</ActionButton>
             {showNotification && <NotificationModal message={notification} closeModal={closeNotification}/>}
         </>

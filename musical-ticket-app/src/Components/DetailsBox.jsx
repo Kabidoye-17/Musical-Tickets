@@ -68,7 +68,7 @@ function DetailsBox(props) {
     <DetailsBoxContainer>
         <DetailsBoxTitle>{props.title}</DetailsBoxTitle>
         <DetailsBoxValue>{props.value}</DetailsBoxValue>
-        {!showSuccess && <Button onClick={() => copyText()}><Copy size={32}></Copy></Button>}
+        {!showSuccess && props.copyEnabled && <Button onClick={() => copyText()}><Copy size={32}></Copy></Button>}
         {showSuccess &&<Button><ThumbsUp size={32} color='green'></ThumbsUp></Button> }
     </DetailsBoxContainer>
     </>
