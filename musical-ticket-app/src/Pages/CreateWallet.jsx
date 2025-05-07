@@ -11,6 +11,12 @@ export const PageTitle = styled.h1`
     margin: 0;
 `;
 
+export const SubTitle = styled.h2`
+    font-size: 3rem;    
+    color:rgb(94, 62, 40);
+    margin: 0;
+`;
+
 export const PasswordInput = styled.input`
     width: 30%;
     height: 30px;
