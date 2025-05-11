@@ -67,6 +67,10 @@ function NavBar() {
         navigate('/watch');
     }
     
+    const handleRefund = () => {
+        navigate('/refund');
+    }
+    
     return (
         <NavBarContainer>
             <NavBarRightContainer>
@@ -75,7 +79,8 @@ function NavBar() {
             <NavBarLeftContainer>
                 <NavButton onClick={() => handleViewWallet()}>View Wallet</NavButton>
                 <NavButton onClick={() => handleCreateWallet()}>Create Wallet</NavButton>
-                <NavButton onClick={() => handleBuyTicket()}>Buy Ticket</NavButton>  
+                <NavButton onClick={() => handleBuyTicket()}>Buy Ticket</NavButton>
+                <NavButton onClick={() => handleRefund()}>Refund</NavButton>  
                 <NavButton onClick={() => handleWatch()}>Watch</NavButton>
             </NavBarLeftContainer>
         </NavBarContainer>

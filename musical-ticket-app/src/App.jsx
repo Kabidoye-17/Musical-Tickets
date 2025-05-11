@@ -4,6 +4,7 @@ import WhoAmI from './Pages/WhoAmI';
 import NavBar from './Components/NavBar';
 import Watch from './Pages/Watch';
 import ProtectedRoute from './Components/ProtectedRoute';
+import Refund from './Pages/Refund';
 
 import styled from 'styled-components';
 import { BrowserRouter } from 'react-router-dom';
@@ -62,6 +63,7 @@ function App() {
           } />
           
           <Route path='/buy-ticket' element={<BuyTicket/>} />
+          <Route path='/refund' element={<Refund/>} />
           <Route path='/watch' element={<Watch/>}/>
           
           {/* Default redirect to View Wallet */}

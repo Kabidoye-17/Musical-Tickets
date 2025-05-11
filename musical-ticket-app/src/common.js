@@ -459,4 +459,3 @@ export const ABI = [
 ];
 export const contractAddress = "0x69f906870be1eee04a5f1a7427c57f530264241c";
 export const sepoliaRPC = "https://sepolia.infura.io/v3/6f6f1ab124ff4449869f5df930ae6fd4";
-export const decimal = 18;

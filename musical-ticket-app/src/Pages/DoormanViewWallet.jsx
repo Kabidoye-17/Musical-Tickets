@@ -4,10 +4,38 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import Web3 from 'web3';
 import { ActionButton, PageTitle, PasswordInput, SubTitle} from './CreateWallet';
-import { Ticket } from "@phosphor-icons/react";
+import { Ticket, Check, X } from "@phosphor-icons/react";
 import { ABI, contractAddress, sepoliaRPC} from '../common.js';
 import { useLocation } from 'react-router-dom';
 import CryptoJS from 'crypto-js';
+
+const VerificationStatus = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 20px 0;
+  padding: 15px;
+  border-radius: 10px;
+  background-color: ${props => props.verified ? '#e6ffe6' : props.verified === false ? '#ffe6e6' : 'transparent'};
+  color: ${props => props.verified ? '#006600' : props.verified === false ? '#cc0000' : '#333'};
+  transition: all 0.3s ease;
+  max-width: 400px;
+  width: 100%;
+`;
+
+const StatusIcon = styled.div`
+  font-size: 48px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const StatusMessage = styled.h2`
+  font-size: 1.5rem;
+  text-align: center;
+  margin: 10px 0;
+`;
 
 function DoormanViewWallet() {
     const location = useLocation();
@@ -17,6 +45,7 @@ function DoormanViewWallet() {
     const [notification, setNotification] = useState({ success: false, message: "" });
     const [ticketBalance, setTicketBalance] = useState("-");
     const [isLoading, setIsLoading] = useState(false);
+    const [verificationStatus, setVerificationStatus] = useState(null); // null, true, or false
     
     const authorizedHashes = {
         [process.env.REACT_APP_VENUE_HASH]: "venue",
@@ -40,6 +69,7 @@ function DoormanViewWallet() {
         if (!walletAddress || !Web3.utils.isAddress(walletAddress)) {
             setNotification({ success: false, message: "Please enter a valid wallet address" });
             setShowNotification(true);
+            setVerificationStatus(null);
             return;
         }
         
@@ -51,6 +81,7 @@ function DoormanViewWallet() {
                 message: "Cannot check balance of venue or doorman wallets."
             });
             setShowNotification(true);
+            setVerificationStatus(null);
             return;
         }
         
@@ -66,16 +97,32 @@ function DoormanViewWallet() {
             // Convert balance from wei to ether
             const convertedBalance = Web3.utils.fromWei(balance, 'ether');
             setTicketBalance(convertedBalance);
-        
-            setNotification({ success: true, message: "Ticket balance fetched successfully" });
-            setShowNotification(true);
+            
+            // Verify if the wallet has at least one ticket (balance > 0)
+            const hasTicket = Number(convertedBalance) > 0;
+            setVerificationStatus(hasTicket);
+            
+            if (hasTicket) {
+            setNotification({ 
+                success: true, 
+                message:  "Valid ticket found! Customer can be admitted." 
 
+            });
+            } else {
+                setNotification({ 
+                    success: false, 
+                    message:  "No valid ticket found for this wallet address."
+    
+                });  
+            }
+            setShowNotification(true);
             
             setIsLoading(false);
         } catch (error) {
             console.error("Error fetching ticket balance:", error);
             setNotification({ success: false, message: error.message });
             setShowNotification(true);
+            setVerificationStatus(null);
             setIsLoading(false);
         }
     }
@@ -87,17 +134,34 @@ function DoormanViewWallet() {
     return (
         <>
         <PageTitle>Welcome Doorman</PageTitle>
-        <SubTitle>View token balance of a customer</SubTitle>
+        <SubTitle>Verify customer tickets</SubTitle>
         <PasswordInput
             type="text"
-            placeholder="Enter wallet address"
+            placeholder="Enter customer's wallet address"
             value={walletAddress}
             onChange={(e) => setWalletAddress(e.target.value)}
         />
 
         <ActionButton onClick={() => getTicketBalance(walletAddress)} disabled={isLoading}>
-            {isLoading ? "Loading..." : "View Wallet"}
+            {isLoading ? "Verifying..." : "Verify Ticket"}
         </ActionButton>
+
+        {verificationStatus !== null && (
+            <VerificationStatus verified={verificationStatus}>
+                <StatusIcon>
+                    {verificationStatus 
+                        ? <Check size={64} weight="bold" color="#006600" /> 
+                        : <X size={64} weight="bold" color="#cc0000" />
+                    }
+                </StatusIcon>
+                <StatusMessage>
+                    {verificationStatus 
+                        ? "ADMIT CUSTOMER" 
+                        : "NO VALID TICKET"
+                    }
+                </StatusMessage>
+            </VerificationStatus>
+        )}
 
         <DetailsBox title={"Ticket Balance"} icon={<Ticket size={32} />} copyEnabled={false} value={ticketBalance}/>
         
