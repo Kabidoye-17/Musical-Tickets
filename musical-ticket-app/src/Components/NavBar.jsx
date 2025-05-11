@@ -57,6 +57,14 @@ function NavBar() {
 
     const handleViewWallet = () => {
         navigate('/view-wallet-auth');
+    };
+
+    const handleBuyTicket = () => {
+        navigate('/buy-ticket');
+    }
+
+    const handleWatch = () => {
+        navigate('/watch');
     }
     
     return (
@@ -67,6 +75,8 @@ function NavBar() {
             <NavBarLeftContainer>
                 <NavButton onClick={() => handleViewWallet()}>View Wallet</NavButton>
                 <NavButton onClick={() => handleCreateWallet()}>Create Wallet</NavButton>
+                <NavButton onClick={() => handleBuyTicket()}>Buy Ticket</NavButton>  
+                <NavButton onClick={() => handleWatch()}>Watch</NavButton>
             </NavBarLeftContainer>
         </NavBarContainer>
       

@@ -45,7 +45,7 @@ function WhoAmI() {
             const role = authorizedHashes[hashedAddress];
 
             if (role) {
-                nav(`/view-wallet-${role}`);
+                nav(`/view-wallet-${role}`, { state: { walletAddress: walletAddress }});
             } else {
                 nav('/view-wallet-customer', { 
                     state: { walletAddress: walletAddress }

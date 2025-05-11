@@ -15,6 +15,7 @@ interface IERC20 {
     event TicketPurchased(address indexed buyer, uint256 amount);
     event TicketRefunded(address indexed buyer, uint256 amount);
     event FundsWithdrawn(address indexed venue, uint256 amount);
+    event CustomerVerified(address indexed customer, address indexed doorman, bool hasTicket);
 }
 
 contract MusicalToken is IERC20 {
@@ -111,13 +112,19 @@ contract MusicalToken is IERC20 {
         return _totalSupply - _balances[venue];
     }
 
+    function getTicketPrice() external view returns (uint256) {
+        return ticketPrice;
+    }
+
     function buyTicket(uint256 numTickets) external payable {
         require(msg.sender != venue && msg.sender != doorman, "Venue or Doorman cannot buy tickets");
         require(msg.value == ticketPrice * numTickets, "Incorrect ETH sent");
-        require(_balances[venue] >= numTickets, "Not enough tickets left");
+        
+        uint256 scaledTicketQuantity = numTickets * (10 ** decimals);
+        require(_balances[venue] >= scaledTicketQuantity, "Not enough tickets left");
 
-        _transfer(venue, msg.sender, numTickets);
-        emit TicketPurchased(msg.sender, numTickets);
+        _transfer(venue, msg.sender, scaledTicketQuantity);
+        emit TicketPurchased(msg.sender, scaledTicketQuantity);
     }
 
     function withdraw() external {
@@ -128,12 +135,13 @@ contract MusicalToken is IERC20 {
     }
 
     function getRefund(uint256 numTickets) external noReentrancy {
-        require(_balances[msg.sender] >= numTickets, "Not enough tokens to get a refund");
+        uint256 scaledTicketQuantity = numTickets * (10 ** decimals);
+        require(_balances[msg.sender] >= scaledTicketQuantity, "Not enough tokens to get a refund");
         require(address(this).balance >= numTickets * ticketPrice, "Not enough balance to give a refund");
 
-        _transfer(msg.sender, venue, numTickets);
+        _transfer(msg.sender, venue, scaledTicketQuantity);
         payable(msg.sender).transfer(numTickets * ticketPrice);
-        emit TicketRefunded(msg.sender, numTickets);
+        emit TicketRefunded(msg.sender, scaledTicketQuantity);
     }
 
     modifier noReentrancy() {
@@ -143,10 +151,12 @@ contract MusicalToken is IERC20 {
         locked = false;
     }
 
-    function verifyCustomer(address customer) external view returns (bool) {
+    function verifyCustomer(address customer) external returns (bool) {
         require(msg.sender == doorman, "Only the doorman can verify customers");
         require(customer != venue && customer != doorman, "Venue or Doorman cannot be verified");
-        return _balances[customer] > 0;
+        bool hasTicket = _balances[customer] > 0;
+        emit CustomerVerified(customer, msg.sender, hasTicket);
+        return hasTicket;
     }
 
 }
