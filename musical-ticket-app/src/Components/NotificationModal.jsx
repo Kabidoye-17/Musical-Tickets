@@ -1,4 +1,3 @@
-import React from 'react';
 import styled from 'styled-components';
 import { DetailsBoxValue } from './DetailsBox';
 import { X } from "@phosphor-icons/react";

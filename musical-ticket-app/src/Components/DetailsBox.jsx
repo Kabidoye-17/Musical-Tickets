@@ -1,6 +1,6 @@
 import styled from 'styled-components';
 import { Copy, ThumbsUp } from "@phosphor-icons/react";
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 const DetailsBoxContainer = styled.div`
     display: flex;
@@ -65,15 +65,15 @@ function DetailsBox(props) {
 
     return (
     <>
-    <DetailsBoxContainer>
-        <DetailsBoxTitle>{props.title}</DetailsBoxTitle>
-        <DetailsBoxValue>{props.value}</DetailsBoxValue>
-        {props.icon && <div>{props.icon}</div>}
-        {!showSuccess && props.copyEnabled && <Button onClick={() => copyText()}><Copy size={32}></Copy></Button>}
-        {showSuccess &&<Button><ThumbsUp size={32} color='green'></ThumbsUp></Button> }
-    </DetailsBoxContainer>
+        <DetailsBoxContainer>
+            <DetailsBoxTitle>{props.title}</DetailsBoxTitle>
+            <DetailsBoxValue>{props.value}</DetailsBoxValue>
+            {props.icon && <div>{props.icon}</div>}
+            {!showSuccess && props.copyEnabled && <Button onClick={() => copyText()}><Copy size={32}></Copy></Button>}
+            {showSuccess && <Button><ThumbsUp size={32} color='green'></ThumbsUp></Button>}
+        </DetailsBoxContainer>
     </>
     );
-  }
+}
   
 export default DetailsBox;

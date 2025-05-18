@@ -1,64 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { ethers, BrowserProvider, Contract } from 'ethers';
-import Web3 from 'web3';
+import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import NotificationModal from '../Components/NotificationModal';
 import DetailsBox from '../Components/DetailsBox';
-import { PageTitle, SubTitle, PasswordInput, ActionButton } from './CreateWallet';
-import { ABI, contractAddress, sepoliaRPC, decimal } from '../common';
-import CryptoJS from 'crypto-js';
+import WalletConnector from '../Components/WalletConnector';
+import WarningBox from '../Components/WarningBox';
+import { PageTitle, SubTitle, ActionButton } from './CreateWallet';
+import {getTicketPrice, getBalanceOf, getRefund, getRefundEthers } from '../Utils/common';
+import web3Provider from '../Utils/web3Provider';
+import ethersProvider from '../Utils/ethersProvider';
 import { Ticket } from "@phosphor-icons/react";
+import { TicketInfo, TicketSection, QuantitySelector, QuantityButton} from './BuyTicket';
 
-const FileInput = styled(PasswordInput)`
-  padding: 10px;
-`;
-
-// Connection method toggle
-const ConnectionToggle = styled.div`
-  display: flex;
-  margin-bottom: 20px;
-  border-radius: 8px;
-  overflow: hidden;
-  border: 1px solid #ddd;
-  width: 100%;
-  max-width: 400px;
-`;
-
-const ToggleOption = styled.button`
-  flex: 1;
-  padding: 12px;
-  background-color: ${props => props.active ? '#ff9c59' : '#fff'};
-  color: ${props => props.active ? '#fff' : '#333'};
-  border: none;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-size: 1rem;
-  font-weight: 500;
-
-  &:hover {
-    background-color: ${props => props.active ? '#ff7f40' : '#fff8f3'};
-  }
-`;
-
-const TicketSection = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin: 20px 0;
-`;
-
-const TicketInfo = styled.div`
-  font-size: 1.5rem;
-  color: #333;
-  margin: 10px 0;
-`;
-
-const QuantitySelector = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  margin: 15px 0;
-`;
 
 const QuantityInput = styled.input`
   width: 80px;
@@ -73,44 +25,6 @@ const QuantityInput = styled.input`
   }
 `;
 
-const QuantityButton = styled.button`
-  padding: 10px 15px;
-  background-color: #ff9c59;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  font-size: 1.2rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  
-  &:hover {
-    background-color: #ff7f40;
-  }
-  
-  &:disabled {
-    background-color: #ccc;
-    cursor: not-allowed;
-  }
-`;
-
-const WarningBox = styled.div`
-  background-color: #fff3cd;
-  color: #856404;
-  border: 1px solid #ffeeba;
-  border-radius: 8px;
-  padding: 15px;
-  margin: 20px 0;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  display: flex;
-  align-items: center;
-  font-size: 14px;
-`;
-
-// Make sure WarningIcon is defined
-const WarningIcon = styled.span`
-  font-size: 20px;
-  margin-right: 10px;
-`;
 
 const RefundButton = styled(ActionButton)`
   background-color: #dc3545;
@@ -121,11 +35,8 @@ const RefundButton = styled(ActionButton)`
 `;
 
 function Refund() {
-  const [password, setPassword] = useState('');
-  const [keystoreFile, setKeystoreFile] = useState(null);
   const [walletInfo, setWalletInfo] = useState(null);
   const [wallet, setWallet] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
   const [isRefunding, setIsRefunding] = useState(false);
   const [notification, setNotification] = useState({ success: false, message: "" });
   const [showNotification, setShowNotification] = useState(false);
@@ -133,31 +44,12 @@ function Refund() {
   const [connectionMethod, setConnectionMethod] = useState('keystore');
   const [ticketBalance, setTicketBalance] = useState(0);
   const [ticketPrice, setTicketPrice] = useState(0.01); // Default value, will update from contract
-  
-  // Special wallet addresses that can't issue refunds
-  const authorizedHashes = {
-    [process.env.REACT_APP_VENUE_HASH]: "venue",
-    [process.env.REACT_APP_DOORMAN_HASH]: "doorman",
-  };
-
-  const hashWalletAddress = (address) => {
-    return CryptoJS.SHA256(address.trim().toLowerCase()).toString();
-  };
-
-  const handleFileChange = (e) => {
-    if (e.target.files.length > 0) {
-      setKeystoreFile(e.target.files[0]);
-    }
-  };
-
+ 
   // Get ticket price from contract when component loads
   useEffect(() => {
     const getTicketPriceFromContract = async () => {
       try {
-        const web3 = new Web3(sepoliaRPC);
-        const contract = new web3.eth.Contract(ABI, contractAddress);
-        const priceWei = await contract.methods.getTicketPrice().call();
-        const priceEth = web3.utils.fromWei(priceWei, 'ether');
+        const priceEth = await getTicketPrice();
         setTicketPrice(parseFloat(priceEth));
       } catch (error) {
         console.error("Error fetching ticket price:", error);
@@ -167,175 +59,23 @@ function Refund() {
     getTicketPriceFromContract();
   }, []);
 
-  // MetaMask connection
-  const connectMetaMask = async () => {
-    setIsLoading(true);
+  // Handle wallet connection from WalletConnector
+  const handleWalletConnected = (walletInfo, walletOrSigner, method, balance) => {
+    setWalletInfo(walletInfo);
+    setWallet(walletOrSigner);
+    setConnectionMethod(method);
     
-    try {
-      // Check if MetaMask is available
-      if (!window.ethereum) {
-        throw new Error("MetaMask is not installed. Please install it to continue.");
-      }
-      
-      // Request account access
-      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-      const address = accounts[0];
-      
-      // Check if the wallet is a special role (venue or doorman)
-      const hashedAddress = hashWalletAddress(address);
-      const role = authorizedHashes[hashedAddress];
-      
-      if (role) {
-        setNotification({
-          success: false,
-          message: `${role.charAt(0).toUpperCase() + role.slice(1)} wallets cannot request refunds. This functionality is for customers only.`
-        });
-        setShowNotification(true);
-        setIsLoading(false);
-        return;
-      }
-      
-      // Create a BrowserProvider to interact with MetaMask
-      const provider = new BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
-      
-      // Store the wallet info
-      setWalletInfo({
-        address: address,
-        privateKey: null
-      });
-      
-      // Store the signer as our wallet object for later use
-      setWallet(signer);
-      
-      // Get ticket balance
-      await getTicketBalance(address);
-      
-      setNotification({ 
-        success: true, 
-        message: "Connected to MetaMask successfully!" 
-      });
-      setShowNotification(true);
-    } catch (err) {
-      setNotification({ 
-        success: false, 
-        message: err.message || "Failed to connect to MetaMask" 
-      });
-      setShowNotification(true);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Keystore wallet decryption
-  const decryptWallet = async () => {
-    if (!keystoreFile) {
-      setNotification({ 
-        success: false, 
-        message: "Please select a keystore file" 
-      });
-      setShowNotification(true);
-      return;
-    }
-
-    if (!password) {
-      setNotification({ 
-        success: false, 
-        message: "Please enter your wallet password" 
-      });
-      setShowNotification(true);
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      const fileReader = new FileReader();
-      fileReader.onload = async (event) => {
-        try {
-          const decryptedWallet = await ethers.Wallet.fromEncryptedJson(event.target.result, password);
-          
-          // Check if the wallet is a special role
-          const hashedAddress = hashWalletAddress(decryptedWallet.address);
-          const role = authorizedHashes[hashedAddress];
-          
-          if (role) {
-            setNotification({
-              success: false,
-              message: `${role.charAt(0).toUpperCase() + role.slice(1)} wallets cannot request refunds. This functionality is for customers only.`
-            });
-            setShowNotification(true);
-            setIsLoading(false);
-            return;
-          }
-          
-          setWallet(decryptedWallet);
-          setWalletInfo({
-            address: decryptedWallet.address,
-            privateKey: decryptedWallet.privateKey
-          });
-          
-          // Get ticket balance
-          await getTicketBalance(decryptedWallet.address);
-          
-          setNotification({ 
-            success: true, 
-            message: "Wallet decrypted successfully!" 
-          });
-          setShowNotification(true);
-        } catch (err) {
-          setNotification({ 
-            success: false, 
-            message: "Failed to decrypt wallet. Please check your password and file." 
-          });
-          setShowNotification(true);
-        } finally {
-          setIsLoading(false);
-        }
-      };
-
-      fileReader.onerror = () => {
-        setNotification({ 
-          success: false, 
-          message: "Failed to read the file" 
-        });
-        setShowNotification(true);
-        setIsLoading(false);
-      };
-
-      fileReader.readAsText(keystoreFile);
-    } catch (err) {
-      setNotification({ 
-        success: false, 
-        message: err.message || "An error occurred" 
-      });
-      setShowNotification(true);
-      setIsLoading(false);
-    }
-  };
-
-  // Get ticket balance for an address
-  const getTicketBalance = async (address) => {
-    try {
-      const web3 = new Web3(sepoliaRPC);
-      const contract = new web3.eth.Contract(ABI, contractAddress);
-      const balance = await contract.methods.balanceOf(address).call();
-      const formattedBalance = parseFloat(web3.utils.fromWei(balance, 'ether'));
-      setTicketBalance(formattedBalance);
+    if (balance !== null) {
+      setTicketBalance(balance);
       
       // If no tickets, show a notification
-      if (formattedBalance === 0) {
+      if (parseFloat(balance) === 0) {
         setNotification({
           success: false,
           message: "You don't have any tickets to refund."
         });
         setShowNotification(true);
       }
-      
-      return formattedBalance;
-    } catch (error) {
-      console.error("Error fetching ticket balance:", error);
-      return 0;
     }
   };
 
@@ -364,42 +104,28 @@ function Refund() {
 
     try {
       if (connectionMethod === 'metamask') {
-        // Using MetaMask with Ethers v6
-        const provider = new BrowserProvider(window.ethereum);
-        const signer = await provider.getSigner();
-        const contract = new Contract(contractAddress, ABI, signer);
-        
-        // Call the contract method
-        const tx = await contract.getRefund(ticketQuantity);
-        const receipt = await tx.wait();
+        // Use our ethersProvider singleton to get a signer
+        const signer = await ethersProvider.getSigner();
+        const receipt = await getRefundEthers(ticketQuantity, signer);
         
         // Update ticket balance after refund
-        await getTicketBalance(walletInfo.address);
+        const newBalance = await getBalanceOf(walletInfo.address);
+        setTicketBalance(newBalance);
         
         setNotification({
           success: true,
-          message: `Successfully refunded ${ticketQuantity} ticket(s)! Transaction hash: ${receipt.transactionHash ? receipt.transactionHash : "Check your wallet for the transaction."}`
+          message: `Successfully refunded ${ticketQuantity} ticket(s)! Transaction hash: ${receipt.hash ? receipt.hash : "Check your wallet for the transaction."}`
         });
       } else {
-        // Using keystore wallet
-        const web3 = new Web3(sepoliaRPC);
-        const contract = new web3.eth.Contract(ABI, contractAddress);
+        // Use the web3Provider helper to create an account properly
+        const account = web3Provider.createAccount(wallet.privateKey);
         
-        // Create a web3 account using the private key
-        const account = web3.eth.accounts.privateKeyToAccount(wallet.privateKey);
-        web3.eth.accounts.wallet.add(account);
-        
-        const tx = {
-          from: account.address,
-          to: contractAddress,
-          gas: 200000,
-          data: contract.methods.getRefund(ticketQuantity).encodeABI()
-        };
-        
-        const receipt = await web3.eth.sendTransaction(tx);
+        // Use our helper function
+        const receipt = await getRefund(ticketQuantity, account);
         
         // Update ticket balance after refund
-        await getTicketBalance(wallet.address);
+        const newBalance = await getBalanceOf(wallet.address);
+        setTicketBalance(newBalance);
         
         setNotification({
           success: true,
@@ -467,52 +193,13 @@ function Refund() {
       <SubTitle>Get a refund for your tickets</SubTitle>
       
       {!walletInfo ? (
-        <>
-          <ConnectionToggle>
-            <ToggleOption 
-              active={connectionMethod === 'keystore'} 
-              onClick={() => setConnectionMethod('keystore')}
-            >
-              Keystore File
-            </ToggleOption>
-            <ToggleOption 
-              active={connectionMethod === 'metamask'} 
-              onClick={() => setConnectionMethod('metamask')}
-            >
-              MetaMask
-            </ToggleOption>
-          </ConnectionToggle>
-          
-          {connectionMethod === 'keystore' ? (
-            <>
-              <FileInput 
-                type="file" 
-                onChange={handleFileChange} 
-              />
-              
-              <PasswordInput 
-                type="password" 
-                placeholder="Enter your wallet password" 
-                value={password}
-                onChange={(e) => setPassword(e.target.value)} 
-              />
-              
-              <ActionButton 
-                onClick={decryptWallet}
-                disabled={isLoading}
-              >
-                {isLoading ? "Decrypting..." : "Decrypt Wallet"}
-              </ActionButton>
-            </>
-          ) : (
-            <ActionButton 
-              onClick={connectMetaMask}
-              disabled={isLoading}
-            >
-              {isLoading ? "Connecting..." : "Connect to MetaMask"}
-            </ActionButton>
-          )}
-        </>
+        <WalletConnector 
+          onWalletConnected={handleWalletConnected} 
+          disallowedRoles={['venue', 'doorman']}
+          disallowedRolesMessage="request refunds"
+          getBalanceAfterConnect={true}
+          getBalanceOf={getBalanceOf}
+        />
       ) : (
         <>
           <DetailsBox 
@@ -531,11 +218,8 @@ function Refund() {
           {ticketBalance > 0 ? (
             <TicketSection>
               <WarningBox>
-                <WarningIcon>⚠️</WarningIcon>
-                <div>
-                  <strong>Important:</strong> Refunding tickets will return {ticketPrice} ETH per ticket to your wallet.
-                  This transaction requires gas fees. The refund process cannot be undone.
-                </div>
+                <strong>Important:</strong> Refunding tickets will return {ticketPrice} ETH per ticket to your wallet.
+                This transaction requires gas fees. The refund process cannot be undone.
               </WarningBox>
               
               <SubTitle>Select Quantity to Refund:</SubTitle>
@@ -574,11 +258,8 @@ function Refund() {
               </RefundButton>
             </TicketSection>
           ) : (
-            <WarningBox>
-              <WarningIcon>ℹ️</WarningIcon>
-              <div>
-                You don't have any tickets to refund. Please purchase tickets first.
-              </div>
+            <WarningBox icon="ℹ️">
+              You don't have any tickets to refund. Please purchase tickets first.
             </WarningBox>
           )}
         </>

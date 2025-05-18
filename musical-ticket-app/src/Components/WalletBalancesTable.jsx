@@ -1,4 +1,3 @@
-import React from 'react';
 import styled from 'styled-components';
 import { ActionButton } from '../Pages/CreateWallet';
 import { ArrowClockwise } from "@phosphor-icons/react";

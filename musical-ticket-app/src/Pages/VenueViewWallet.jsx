@@ -3,10 +3,20 @@ import NotificationModal from '../Components/NotificationModal';
 import WalletBalancesTable from '../Components/WalletBalancesTable';
 import React, { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
-import Web3 from 'web3';
 import { ethers, BrowserProvider, Contract } from 'ethers';
 import { ActionButton, PageTitle, PasswordInput, SubTitle } from './CreateWallet';
-import { ABI, contractAddress, sepoliaRPC } from '../common.js';
+import { 
+    getTicketPrice, 
+    getTotalTokensSold, 
+    getTotalSupply, 
+    getVenueAddress, 
+    getBalanceOf,
+    getPastTransferEvents,
+    contractAddress,
+    WALLET_ROLES,
+    isWalletRole
+} from '../Utils/common.js';
+import web3Provider from '../Utils/web3Provider';
 import { CurrencyEth, ShoppingCartSimple, ChartPie, Wallet, Ticket } from "@phosphor-icons/react";
 import CryptoJS from 'crypto-js';
 import { useLocation } from 'react-router-dom';
@@ -78,6 +88,15 @@ function VenueViewWallet() {
     
     // Load contract information and fetch wallet balances on component mount
     useEffect(() => {
+        // Verify the wallet is actually a venue wallet
+        if (venueWalletFromState && !isWalletRole(venueWalletFromState, WALLET_ROLES.VENUE)) {
+            setNotification({ 
+                success: false, 
+                message: "This wallet does not have venue permissions." 
+            });
+            setShowNotification(true);
+        }
+        
         loadContractInfo();
         debouncedFetchWalletBalances();
     }, []);
@@ -89,8 +108,8 @@ function VenueViewWallet() {
         setShowNotification(false);
         
         try {
-            console.log("Connecting to Sepolia RPC:", sepoliaRPC);
-            const web3 = new Web3(sepoliaRPC);
+            console.log("Connecting to Sepolia RPC");
+            const web3 = web3Provider.getWeb3();
             
             // Verify connection to the network
             try {
@@ -100,13 +119,9 @@ function VenueViewWallet() {
                 throw new Error(`Failed to connect to Ethereum network: ${connectionError.message}`);
             }
             
-            console.log("Creating contract instance with address:", contractAddress);
-            const contract = new web3.eth.Contract(ABI, contractAddress);
-            
             // Get ticket price
             try {
-                const priceWei = await contract.methods.getTicketPrice().call();
-                const priceEth = web3.utils.fromWei(priceWei, 'ether');
+                const priceEth = await getTicketPrice();
                 setTicketPrice(priceEth);
                 console.log("Ticket Price:", priceEth, "ETH");
             } catch (priceError) {
@@ -115,8 +130,7 @@ function VenueViewWallet() {
             
             // Get total tokens sold
             try {
-                const tokensSold = await contract.methods.getTotalTokensSold().call();
-                const tokensSoldEth = web3.utils.fromWei(tokensSold, 'ether');
+                const tokensSoldEth = await getTotalTokensSold();
                 setTotalSold(tokensSoldEth);
                 console.log("Total Sold:", tokensSoldEth);
             } catch (soldError) {
@@ -125,8 +139,7 @@ function VenueViewWallet() {
             
             // Get total supply
             try {
-                const supply = await contract.methods.totalSupply().call();
-                const supplyEth = web3.utils.fromWei(supply, 'ether');
+                const supplyEth = await getTotalSupply();
                 setTotalSupply(supplyEth);
                 console.log("Total Supply:", supplyEth);
             } catch (supplyError) {
@@ -135,8 +148,8 @@ function VenueViewWallet() {
             
             // Get contract ETH balance
             try {
-                const contractBalanceWei = await web3.eth.getBalance(contractAddress);
-                const contractBalanceEth = web3.utils.fromWei(contractBalanceWei, 'ether');
+                const contractBalanceWei = await web3Provider.getBalance(contractAddress);
+                const contractBalanceEth = web3Provider.fromWei(contractBalanceWei);
                 setContractBalance(contractBalanceEth);
                 console.log("Contract Balance:", contractBalanceEth, "ETH");
             } catch (balanceError) {
@@ -146,7 +159,7 @@ function VenueViewWallet() {
             // If venueAddress is not set from state, get it from the contract
             if (!venueAddress) {
                 try {
-                    const venue = await contract.methods.venue().call();
+                    const venue = await getVenueAddress();
                     setVenueAddress(venue);
                     console.log("Venue Address from contract:", venue);
                 } catch (venueError) {
@@ -159,7 +172,7 @@ function VenueViewWallet() {
                 const venueAddrToUse = venueAddress || venueWalletFromState;
                 console.log("Getting balance for venue address:", venueAddrToUse);
                 const venueBalanceWei = await web3.eth.getBalance(venueAddrToUse);
-                const venueBalanceEth = web3.utils.fromWei(venueBalanceWei, 'ether');
+                const venueBalanceEth = web3Provider.fromWei(venueBalanceWei);
                 setVenueBalance(venueBalanceEth);
                 console.log("Venue ETH Balance:", venueBalanceEth, "ETH");
             } catch (venueBalanceError) {
@@ -172,34 +185,24 @@ function VenueViewWallet() {
                 console.log("Checking ticket balance for venue address:", venueAddrToUse);
                 
                 // First verify if the venue address is valid
-                if (!venueAddrToUse || !web3.utils.isAddress(venueAddrToUse)) {
+                if (!venueAddrToUse || !web3Provider.isValidAddress(venueAddrToUse)) {
                     throw new Error("Invalid venue address");
                 }
                 
                 // Try to get ticket balance using direct call for better error reporting
                 try {
-                    const venueTicketBalanceWei = await contract.methods.balanceOf(venueAddrToUse).call();
-                    const venueTicketBalanceEth = web3.utils.fromWei(venueTicketBalanceWei, 'ether');
+                    const venueTicketBalanceEth = await getBalanceOf(venueAddrToUse);
                     setRemainingTickets(venueTicketBalanceEth);
                     console.log("Remaining Tickets:", venueTicketBalanceEth);
                 } catch (directCallError) {
                     console.error("Direct balanceOf call error:", directCallError);
                     
-                    // Fallback: Try an alternative approach - if this is a known issue with some Web3 implementations
-                    try {
-                        // Set a placeholder value for now
-                        console.log("Using fallback approach for remaining tickets");
-                        setRemainingTickets("Data unavailable");
-                        
-                        // We could still try to calculate this from totalSupply and totalSold
-                        // But we'll avoid potential math errors by using a placeholder
-                    } catch (fallbackError) {
-                        throw new Error(`Fallback approach also failed: ${fallbackError.message}`);
-                    }
+                    // Fallback: Try an alternative approach
+                    console.log("Using fallback approach for remaining tickets");
+                    setRemainingTickets("Data unavailable");
                 }
             } catch (ticketBalanceError) {
                 console.error("Ticket balance error details:", ticketBalanceError);
-                // Don't throw here, just log the error and continue
                 console.warn(`Unable to get venue ticket balance: ${ticketBalanceError.message}`);
                 setRemainingTickets("Error loading");
             }
@@ -233,14 +236,8 @@ function VenueViewWallet() {
         setShowNotification(false);
         
         try {
-            const web3 = new Web3(sepoliaRPC);
-            const contract = new web3.eth.Contract(ABI, contractAddress);
-            
             // Get past Transfer events to identify addresses with balances
-            const pastEvents = await contract.getPastEvents('Transfer', {
-                fromBlock: 0,
-                toBlock: 'latest'
-            });
+            const pastEvents = await getPastTransferEvents();
             
             // Extract unique addresses from events
             const addressSet = new Set();
@@ -254,10 +251,10 @@ function VenueViewWallet() {
             
             // Get balances for each address
             const balancesPromises = Array.from(addressSet).map(async (address) => {
-                const balance = await contract.methods.balanceOf(address).call();
+                const balance = await getBalanceOf(address);
                 return {
                     address,
-                    balance: web3.utils.fromWei(balance, 'ether'),
+                    balance: balance,
                     isVenue: address.toLowerCase() === (venueAddress || venueWalletFromState).toLowerCase(),
                     notes: ""
                 };
@@ -288,15 +285,14 @@ function VenueViewWallet() {
     };
 
     const displayWalletDetails = (walletAddress) => {
-        const web3 = new Web3("https://sepolia.infura.io/v3/6f6f1ab124ff4449869f5df930ae6fd4");
-    
-        if (web3.utils.isAddress(walletAddress)){
+        if (web3Provider.isValidAddress(walletAddress)){
             setIsLoading(true);
             
             // Fetch ETH balance
+            const web3 = web3Provider.getWeb3();
             web3.eth.getBalance(walletAddress)
                 .then(function(balance) {                    
-                    const balanceInEther = web3.utils.fromWei(balance, "ether");
+                    const balanceInEther = web3Provider.fromWei(balance);
                     setCryptoBalance(balanceInEther);
                     
                     setTicketBalance("0");
@@ -352,14 +348,8 @@ function VenueViewWallet() {
         setShowNotification(false);
         
         try {
-            const web3 = new Web3(sepoliaRPC);
-            const contract = new web3.eth.Contract(ABI, contractAddress);
-            
             // Get past Transfer events to identify addresses with balances
-            const pastEvents = await contract.getPastEvents('Transfer', {
-                fromBlock: 0,
-                toBlock: 'latest'
-            });
+            const pastEvents = await getPastTransferEvents();
             
             // Extract unique addresses from events
             const addressSet = new Set();
@@ -373,10 +363,10 @@ function VenueViewWallet() {
             
             // Get balances for each address
             const balancesPromises = Array.from(addressSet).map(async (address) => {
-                const balance = await contract.methods.balanceOf(address).call();
+                const balance = await getBalanceOf(address);
                 return {
                     address,
-                    balance: web3.utils.fromWei(balance, 'ether'),
+                    balance: balance,
                     isVenue: address.toLowerCase() === (venueAddress || venueWalletFromState).toLowerCase(),
                     notes: ""
                 };

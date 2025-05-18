@@ -5,10 +5,8 @@ import { ActionButton, PasswordInput } from './CreateWallet';
 import Web3 from 'web3';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import CryptoJS from 'crypto-js';
 import NotificationModal from '../Components/NotificationModal';
-
-
+import { getWalletRole } from '../Utils/common';
 
 function WhoAmI() {
 
@@ -24,15 +22,6 @@ function WhoAmI() {
 
     const nav = useNavigate();
 
-    const authorizedHashes = {
-        [process.env.REACT_APP_VENUE_HASH]: "venue",
-        [process.env.REACT_APP_DOORMAN_HASH]: "doorman",
-    }
-
-    const hashWalletAddress = (address) => {
-        return CryptoJS.SHA256(address.trim().toLowerCase()).toString();
-    };
-
     const closeNotification = () => {
         setShowNotification(false);
     }
@@ -40,11 +29,11 @@ function WhoAmI() {
     const redirectToViewWallet = (walletAddress) => {
         setIsLoading(true);
 
-        try{
-            const hashedAddress = hashWalletAddress(walletAddress);
-            const role = authorizedHashes[hashedAddress];
+        try {
+            // Use the common utility to get the wallet role
+            const role = getWalletRole(walletAddress);
 
-            if (role) {
+            if (role && role !== 'customer') {
                 nav(`/view-wallet-${role}`, { state: { walletAddress: walletAddress }});
             } else {
                 nav('/view-wallet-customer', { 

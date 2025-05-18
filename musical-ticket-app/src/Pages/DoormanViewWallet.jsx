@@ -5,9 +5,15 @@ import styled from 'styled-components';
 import Web3 from 'web3';
 import { ActionButton, PageTitle, PasswordInput, SubTitle} from './CreateWallet';
 import { Ticket, Check, X } from "@phosphor-icons/react";
-import { ABI, contractAddress, sepoliaRPC} from '../common.js';
+import { 
+    ABI, 
+    contractAddress, 
+    sepoliaRPC, 
+    isSpecialWallet, 
+    WALLET_ROLES,
+    isWalletRole
+} from '../Utils/common';
 import { useLocation } from 'react-router-dom';
-import CryptoJS from 'crypto-js';
 
 const VerificationStatus = styled.div`
   display: flex;
@@ -47,22 +53,19 @@ function DoormanViewWallet() {
     const [isLoading, setIsLoading] = useState(false);
     const [verificationStatus, setVerificationStatus] = useState(null); // null, true, or false
     
-    const authorizedHashes = {
-        [process.env.REACT_APP_VENUE_HASH]: "venue",
-        [process.env.REACT_APP_DOORMAN_HASH]: "doorman",
-    };
-    
-    const hashWalletAddress = (address) => {
-        return CryptoJS.SHA256(address.trim().toLowerCase()).toString();
-    };
-    
     // Check if doorman wallet exists on component mount
     useEffect(() => {
         if (!doormanWallet) {
             setNotification({ success: false, message: "Doorman wallet not found. Please log in again." });
             setShowNotification(true);
+        } else if (!isWalletRole(doormanWallet, WALLET_ROLES.DOORMAN)) {
+            setNotification({ 
+                success: false, 
+                message: "This wallet does not have doorman permissions." 
+            });
+            setShowNotification(true);
         }
-    }, []);
+    }, [doormanWallet]);
 
     const getTicketBalance = async (walletAddress) => {
         // Validate wallet address
@@ -73,9 +76,8 @@ function DoormanViewWallet() {
             return;
         }
         
-        // Check if the address is a protected address (venue or doorman)
-        const hashedAddress = hashWalletAddress(walletAddress);
-        if (authorizedHashes[hashedAddress]) {
+        // Check if the address is a special role (venue or doorman) using our common utility
+        if (isSpecialWallet(walletAddress)) {
             setNotification({ 
                 success: false, 
                 message: "Cannot check balance of venue or doorman wallets."

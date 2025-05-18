@@ -14,6 +14,7 @@ interface IERC20 {
 
     event TicketPurchased(address indexed buyer, uint256 amount);
     event TicketRefunded(address indexed buyer, uint256 amount);
+    event TicketReturned(address indexed customer, uint256 amount);
     event FundsWithdrawn(address indexed venue, uint256 amount);
     event CustomerVerified(address indexed customer, address indexed doorman, bool hasTicket);
 }
@@ -127,12 +128,6 @@ contract MusicalToken is IERC20 {
         emit TicketPurchased(msg.sender, scaledTicketQuantity);
     }
 
-    function withdraw() external {
-        require(msg.sender == venue, "Only the venue can withdraw funds");
-        uint256 amount = address(this).balance;
-        payable(venue).transfer(amount);
-        emit FundsWithdrawn(venue, amount);
-    }
 
     function getRefund(uint256 numTickets) external noReentrancy {
         uint256 scaledTicketQuantity = numTickets * (10 ** decimals);
@@ -143,6 +138,16 @@ contract MusicalToken is IERC20 {
         payable(msg.sender).transfer(numTickets * ticketPrice);
         emit TicketRefunded(msg.sender, scaledTicketQuantity);
     }
+    
+    function returnTicket(uint256 numTickets) external {
+        require(msg.sender != venue && msg.sender != doorman, "Venue or Doorman cannot return tickets");
+        
+        uint256 scaledTicketQuantity = numTickets * (10 ** decimals);
+        require(_balances[msg.sender] >= scaledTicketQuantity, "Not enough tickets to return");
+
+        _transfer(msg.sender, venue, scaledTicketQuantity);
+        emit TicketReturned(msg.sender, scaledTicketQuantity);
+    }
 
     modifier noReentrancy() {
         require(!locked, "No reentrancy allowed");
@@ -150,13 +155,4 @@ contract MusicalToken is IERC20 {
         _;
         locked = false;
     }
-
-    function verifyCustomer(address customer) external returns (bool) {
-        require(msg.sender == doorman, "Only the doorman can verify customers");
-        require(customer != venue && customer != doorman, "Venue or Doorman cannot be verified");
-        bool hasTicket = _balances[customer] > 0;
-        emit CustomerVerified(customer, msg.sender, hasTicket);
-        return hasTicket;
-    }
-
 }

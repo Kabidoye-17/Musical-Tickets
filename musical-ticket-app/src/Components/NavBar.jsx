@@ -1,4 +1,3 @@
-import React from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 
@@ -61,15 +60,15 @@ function NavBar() {
 
     const handleBuyTicket = () => {
         navigate('/buy-ticket');
-    }
+    };
 
     const handleWatch = () => {
         navigate('/watch');
-    }
+    };
     
     const handleRefund = () => {
         navigate('/refund');
-    }
+    };
     
     return (
         <NavBarContainer>

@@ -2,7 +2,7 @@ import DetailsBox from '../Components/DetailsBox';
 import NotificationModal from '../Components/NotificationModal';
 import React, { useState } from 'react';
 import styled from 'styled-components';
-import Web3 from 'web3';
+import web3Provider from '../Utils/web3Provider';
 
 
 export const PageTitle = styled.h1`
@@ -67,7 +67,7 @@ function CreateWallet() {
         }
     
         try {
-            const web3 = new Web3();
+            const web3 = web3Provider.getWeb3();
             const wallet = web3.eth.accounts.create();
             const keystore = await web3.eth.accounts.encrypt(wallet.privateKey, password);
     
