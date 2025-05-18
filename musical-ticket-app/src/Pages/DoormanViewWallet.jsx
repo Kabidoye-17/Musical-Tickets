@@ -2,17 +2,15 @@ import DetailsBox from '../Components/DetailsBox';
 import NotificationModal from '../Components/NotificationModal';
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import Web3 from 'web3';
 import { ActionButton, PageTitle, PasswordInput, SubTitle} from './CreateWallet';
 import { Ticket, Check, X } from "@phosphor-icons/react";
 import { 
-    ABI, 
-    contractAddress, 
-    sepoliaRPC, 
+    getBalanceOf,
     isSpecialWallet, 
     WALLET_ROLES,
     isWalletRole
 } from '../Utils/common';
+import web3Provider from '../Utils/web3Provider';
 import { useLocation } from 'react-router-dom';
 
 const VerificationStatus = styled.div`
@@ -69,7 +67,7 @@ function DoormanViewWallet() {
 
     const getTicketBalance = async (walletAddress) => {
         // Validate wallet address
-        if (!walletAddress || !Web3.utils.isAddress(walletAddress)) {
+        if (!walletAddress || !web3Provider.isValidAddress(walletAddress)) {
             setNotification({ success: false, message: "Please enter a valid wallet address" });
             setShowNotification(true);
             setVerificationStatus(null);
@@ -90,41 +88,34 @@ function DoormanViewWallet() {
         // Set loading state
         setIsLoading(true);
         
-        const web3 = new Web3(sepoliaRPC);
-        const contract = new web3.eth.Contract(ABI, contractAddress);
-        
         try {
-            const balance = await contract.methods.balanceOf(walletAddress).call();
-            
-            // Convert balance from wei to ether
-            const convertedBalance = Web3.utils.fromWei(balance, 'ether');
-            setTicketBalance(convertedBalance);
+            // Use the helper function instead of direct contract call
+            const balance = await getBalanceOf(walletAddress);
+            setTicketBalance(balance);
             
             // Verify if the wallet has at least one ticket (balance > 0)
-            const hasTicket = Number(convertedBalance) > 0;
+            const hasTicket = Number(balance) > 0;
             setVerificationStatus(hasTicket);
             
             if (hasTicket) {
-            setNotification({ 
-                success: true, 
-                message:  "Valid ticket found! Customer can be admitted." 
-
-            });
+                setNotification({ 
+                    success: true, 
+                    message: "Valid ticket found! Customer can be admitted." 
+                });
             } else {
                 setNotification({ 
                     success: false, 
-                    message:  "No valid ticket found for this wallet address."
-    
+                    message: "No valid ticket found for this wallet address."
                 });  
             }
             setShowNotification(true);
             
-            setIsLoading(false);
         } catch (error) {
             console.error("Error fetching ticket balance:", error);
             setNotification({ success: false, message: error.message });
             setShowNotification(true);
             setVerificationStatus(null);
+        } finally {
             setIsLoading(false);
         }
     }

@@ -11,12 +11,6 @@ interface IERC20 {
 
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Approval(address indexed owner, address indexed spender, uint256 value);
-
-    event TicketPurchased(address indexed buyer, uint256 amount);
-    event TicketRefunded(address indexed buyer, uint256 amount);
-    event TicketReturned(address indexed customer, uint256 amount);
-    event FundsWithdrawn(address indexed venue, uint256 amount);
-    event CustomerVerified(address indexed customer, address indexed doorman, bool hasTicket);
 }
 
 contract MusicalToken is IERC20 {
@@ -33,6 +27,14 @@ contract MusicalToken is IERC20 {
 
     mapping(address => uint256) private _balances;
     mapping(address => mapping(address => uint256)) private _allowances;
+    mapping(address => uint256) private ticketsBought; 
+
+    event TicketPurchased(address indexed buyer, uint256 amount);
+    event TicketRefunded(address indexed buyer, uint256 amount);
+    event TicketReturned(address indexed customer, uint256 amount);
+    event FundsWithdrawn(address indexed venue, uint256 amount);
+    event FundsDeposited(address indexed from, uint256 amount);
+    event TicketPriceUpdated(uint256 oldPrice, uint256 newPrice);
 
     constructor(
         string memory _name,
@@ -49,7 +51,7 @@ contract MusicalToken is IERC20 {
         name = _name;
         symbol = _symbol;
         decimals = _decimals;
-        _totalSupply = initialSupply * 10**uint256(decimals);
+        _totalSupply = initialSupply * 10 ** uint256(decimals);
         venue = _venue;
         doorman = _doorman;
 
@@ -89,8 +91,8 @@ contract MusicalToken is IERC20 {
     }
 
     function _transfer(address sender, address recipient, uint256 amount) internal {
-        require(sender != address(0), "ERC20: transfer from the zero address");
-        require(recipient != address(0), "ERC20: transfer to the zero address");
+        require(sender != address(0), "ERC20: transfer from zero address");
+        require(recipient != address(0), "ERC20: transfer to zero address");
         require(_balances[sender] >= amount, "ERC20: transfer amount exceeds balance");
 
         unchecked {
@@ -101,8 +103,8 @@ contract MusicalToken is IERC20 {
     }
 
     function _approve(address owner, address spender, uint256 amount) internal {
-        require(owner != address(0), "ERC20: approve from the zero address");
-        require(spender != address(0), "ERC20: approve to the zero address");
+        require(owner != address(0), "ERC20: approve from zero address");
+        require(spender != address(0), "ERC20: approve to zero address");
 
         _allowances[owner][spender] = amount;
         emit Approval(owner, spender, amount);
@@ -120,28 +122,30 @@ contract MusicalToken is IERC20 {
     function buyTicket(uint256 numTickets) external payable {
         require(msg.sender != venue && msg.sender != doorman, "Venue or Doorman cannot buy tickets");
         require(msg.value == ticketPrice * numTickets, "Incorrect ETH sent");
-        
+
         uint256 scaledTicketQuantity = numTickets * (10 ** decimals);
         require(_balances[venue] >= scaledTicketQuantity, "Not enough tickets left");
 
         _transfer(venue, msg.sender, scaledTicketQuantity);
+        ticketsBought[msg.sender] += numTickets; 
         emit TicketPurchased(msg.sender, scaledTicketQuantity);
     }
 
-
     function getRefund(uint256 numTickets) external noReentrancy {
         uint256 scaledTicketQuantity = numTickets * (10 ** decimals);
-        require(_balances[msg.sender] >= scaledTicketQuantity, "Not enough tokens to get a refund");
-        require(address(this).balance >= numTickets * ticketPrice, "Not enough balance to give a refund");
+        require(_balances[msg.sender] >= scaledTicketQuantity, "Not enough tokens to refund");
+        require(address(this).balance >= numTickets * ticketPrice, "Not enough ETH for refund");
+        require(ticketsBought[msg.sender] >= numTickets, "You didn't buy that many tickets");
 
         _transfer(msg.sender, venue, scaledTicketQuantity);
+        ticketsBought[msg.sender] -= numTickets; 
         payable(msg.sender).transfer(numTickets * ticketPrice);
         emit TicketRefunded(msg.sender, scaledTicketQuantity);
     }
-    
+
     function returnTicket(uint256 numTickets) external {
         require(msg.sender != venue && msg.sender != doorman, "Venue or Doorman cannot return tickets");
-        
+
         uint256 scaledTicketQuantity = numTickets * (10 ** decimals);
         require(_balances[msg.sender] >= scaledTicketQuantity, "Not enough tickets to return");
 
@@ -149,6 +153,30 @@ contract MusicalToken is IERC20 {
         emit TicketReturned(msg.sender, scaledTicketQuantity);
     }
 
+    function withdrawFunds(uint256 amount) external {
+        require(msg.sender == venue, "Only venue can withdraw funds");
+        require(address(this).balance >= amount, "Not enough ETH in contract");
+
+        payable(venue).transfer(amount);
+        emit FundsWithdrawn(venue, amount);
+    }
+
+    function depositFunds() external payable {
+        require(msg.sender == venue, "Only venue can deposit funds");
+        emit FundsDeposited(msg.sender, msg.value);
+    }
+
+    function updateTicketPrice(uint256 newPrice) external {
+        require(msg.sender == venue, "Only venue can update the ticket price");
+        require(newPrice > 0, "Ticket price must be greater than zero");
+
+        uint256 oldPrice = ticketPrice;
+        ticketPrice = newPrice;
+
+        emit TicketPriceUpdated(oldPrice, newPrice);
+    }
+
+    // Reentrancy protection
     modifier noReentrancy() {
         require(!locked, "No reentrancy allowed");
         locked = true;

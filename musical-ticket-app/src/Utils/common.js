@@ -2,8 +2,8 @@ import web3Provider from './web3Provider';
 import { ethers } from 'ethers';
 import CryptoJS from 'crypto-js';
 
-// Existing exports (keep these)
-export const contractAddress = '0x799403a225641318304200a51fd7a62991dc8e80'; // Your contract address here
+
+export const contractAddress = '0x5f4e27f469fff808280bf1c70de30b1e06812c03'; 
 export const sepoliaRPC = 'https://sepolia.infura.io/v3/6f6f1ab124ff4449869f5df930ae6fd4';
 export const decimal = 18;
 export const ABI = [
@@ -69,41 +69,23 @@ export const ABI = [
 		"type": "event"
 	},
 	{
+		"anonymous": false,
 		"inputs": [
 			{
+				"indexed": true,
 				"internalType": "address",
-				"name": "spender",
+				"name": "from",
 				"type": "address"
 			},
 			{
+				"indexed": false,
 				"internalType": "uint256",
 				"name": "amount",
 				"type": "uint256"
 			}
 		],
-		"name": "approve",
-		"outputs": [
-			{
-				"internalType": "bool",
-				"name": "",
-				"type": "bool"
-			}
-		],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "numTickets",
-				"type": "uint256"
-			}
-		],
-		"name": "buyTicket",
-		"outputs": [],
-		"stateMutability": "payable",
-		"type": "function"
+		"name": "FundsDeposited",
+		"type": "event"
 	},
 	{
 		"anonymous": false,
@@ -125,30 +107,23 @@ export const ABI = [
 		"type": "event"
 	},
 	{
+		"anonymous": false,
 		"inputs": [
 			{
+				"indexed": false,
 				"internalType": "uint256",
-				"name": "numTickets",
+				"name": "oldPrice",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "newPrice",
 				"type": "uint256"
 			}
 		],
-		"name": "getRefund",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "numTickets",
-				"type": "uint256"
-			}
-		],
-		"name": "returnTicket",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
+		"name": "TicketPriceUpdated",
+		"type": "event"
 	},
 	{
 		"anonymous": false,
@@ -208,30 +183,6 @@ export const ABI = [
 		"type": "event"
 	},
 	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "recipient",
-				"type": "address"
-			},
-			{
-				"internalType": "uint256",
-				"name": "amount",
-				"type": "uint256"
-			}
-		],
-		"name": "transfer",
-		"outputs": [
-			{
-				"internalType": "bool",
-				"name": "",
-				"type": "bool"
-			}
-		],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
 		"anonymous": false,
 		"inputs": [
 			{
@@ -255,35 +206,6 @@ export const ABI = [
 		],
 		"name": "Transfer",
 		"type": "event"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "sender",
-				"type": "address"
-			},
-			{
-				"internalType": "address",
-				"name": "recipient",
-				"type": "address"
-			},
-			{
-				"internalType": "uint256",
-				"name": "amount",
-				"type": "uint256"
-			}
-		],
-		"name": "transferFrom",
-		"outputs": [
-			{
-				"internalType": "bool",
-				"name": "",
-				"type": "bool"
-			}
-		],
-		"stateMutability": "nonpayable",
-		"type": "function"
 	},
 	{
 		"inputs": [
@@ -313,6 +235,30 @@ export const ABI = [
 		"inputs": [
 			{
 				"internalType": "address",
+				"name": "spender",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "amount",
+				"type": "uint256"
+			}
+		],
+		"name": "approve",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
 				"name": "account",
 				"type": "address"
 			}
@@ -326,6 +272,19 @@ export const ABI = [
 			}
 		],
 		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "numTickets",
+				"type": "uint256"
+			}
+		],
+		"name": "buyTicket",
+		"outputs": [],
+		"stateMutability": "payable",
 		"type": "function"
 	},
 	{
@@ -343,6 +302,13 @@ export const ABI = [
 	},
 	{
 		"inputs": [],
+		"name": "depositFunds",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
 		"name": "doorman",
 		"outputs": [
 			{
@@ -352,6 +318,19 @@ export const ABI = [
 			}
 		],
 		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "numTickets",
+				"type": "uint256"
+			}
+		],
+		"name": "getRefund",
+		"outputs": [],
+		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{
@@ -394,6 +373,19 @@ export const ABI = [
 		"type": "function"
 	},
 	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "numTickets",
+				"type": "uint256"
+			}
+		],
+		"name": "returnTicket",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
 		"inputs": [],
 		"name": "symbol",
 		"outputs": [
@@ -433,6 +425,72 @@ export const ABI = [
 		"type": "function"
 	},
 	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "recipient",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "amount",
+				"type": "uint256"
+			}
+		],
+		"name": "transfer",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "sender",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "recipient",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "amount",
+				"type": "uint256"
+			}
+		],
+		"name": "transferFrom",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "newPrice",
+				"type": "uint256"
+			}
+		],
+		"name": "updateTicketPrice",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
 		"inputs": [],
 		"name": "venue",
 		"outputs": [
@@ -443,6 +501,19 @@ export const ABI = [
 			}
 		],
 		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "amount",
+				"type": "uint256"
+			}
+		],
+		"name": "withdrawFunds",
+		"outputs": [],
+		"stateMutability": "nonpayable",
 		"type": "function"
 	}
 ];

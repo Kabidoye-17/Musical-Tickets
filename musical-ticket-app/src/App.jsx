@@ -41,9 +41,13 @@ function App() {
         </Top>
         <Routes>
           <Route path="/create-wallet" element={<CreateWallet />} />
+          <Route path='/buy-ticket' element={<BuyTicket/>} />
+          <Route path='/refund' element={<Refund/>} />
+          <Route path='/watch' element={<Watch/>}/>
+          
           <Route path="/view-wallet-auth" element={<WhoAmI />} />
           
-          {/* Protected Routes - Only accessible after going through WhoAmI */}
+          {/* Protected Routes - Only accessible after going through WhoAmI.jsx */}
           <Route path="/view-wallet-venue" element={
             <ProtectedRoute>
               <VenueViewWallet />
@@ -61,11 +65,7 @@ function App() {
               <PurchaserViewWallet />
             </ProtectedRoute>
           } />
-          
-          <Route path='/buy-ticket' element={<BuyTicket/>} />
-          <Route path='/refund' element={<Refund/>} />
-          <Route path='/watch' element={<Watch/>}/>
-          
+      
           {/* Default redirect to View Wallet */}
           <Route path="/" element={<Navigate to="/view-wallet-auth" replace />} />
         </Routes>

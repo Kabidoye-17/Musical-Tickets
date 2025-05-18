@@ -1,8 +1,7 @@
 import DetailsBox from '../Components/DetailsBox';
 import NotificationModal from '../Components/NotificationModal';
-import React, { useState, useEffect } from 'react';
+import{ useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import styled from 'styled-components';
 import web3Provider from '../Utils/web3Provider';
 import { getBalanceOf } from '../Utils/common';
 import { PageTitle, SubTitle} from './CreateWallet';
