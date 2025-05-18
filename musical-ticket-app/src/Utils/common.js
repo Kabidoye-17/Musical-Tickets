@@ -1,6 +1,5 @@
 import web3Provider from './web3Provider';
 import { ethers } from 'ethers';
-import CryptoJS from 'crypto-js';
 
 
 export const contractAddress = '0x5f4e27f469fff808280bf1c70de30b1e06812c03'; 
@@ -518,12 +517,12 @@ export const ABI = [
 	}
 ];
 
-// Contract helper functions
+// Contract helper 
 const getContract = () => {
   return web3Provider.getContract(ABI, contractAddress);
 };
 
-// Ethers.js helpers
+// Ethers.js helper
 export const getEthersContract = (signer) => {
   return new ethers.Contract(contractAddress, ABI, signer);
 };
@@ -559,32 +558,12 @@ export const getVenueAddress = async () => {
 };
 
 export const getDoormanAddress = async () => {
-  const contract = getContract();
+	  const contract = getContract();
   return await contract.methods.doorman().call();
-};
+}
 
-export const getAllowance = async (owner, spender) => {
-  const contract = getContract();
-  const allowance = await contract.methods.allowance(owner, spender).call();
-  return web3Provider.fromWei(allowance);
-};
 
-export const getDecimals = async () => {
-  const contract = getContract();
-  return await contract.methods.decimals().call();
-};
-
-export const getName = async () => {
-  const contract = getContract();
-  return await contract.methods.name().call();
-};
-
-export const getSymbol = async () => {
-  const contract = getContract();
-  return await contract.methods.symbol().call();
-};
-
-// Write functions (with transaction parameters)
+// Web3.js implementation - For use with Keystore wallet
 export const buyTicket = async (numTickets, account, value) => {
   const contract = getContract();
   const data = contract.methods.buyTicket(numTickets).encodeABI();
@@ -601,6 +580,17 @@ export const buyTicket = async (numTickets, account, value) => {
   return await web3.eth.sendTransaction(tx);
 };
 
+
+// Ethers.js implementation - For use with MetaMask
+export const buyTicketEthers = async (numTickets, signer, valueInEther) => {
+  const contract = getEthersContract(signer);
+  const valueInWei = ethers.parseEther(valueInEther.toString());
+  const tx = await contract.buyTicket(numTickets, { value: valueInWei });
+  return await tx.wait();
+};
+
+
+// Web3.js implementation - For use with Keystore wallet
 export const getRefund = async (numTickets, account) => {
   const contract = getContract();
   const data = contract.methods.getRefund(numTickets).encodeABI();
@@ -616,6 +606,14 @@ export const getRefund = async (numTickets, account) => {
   return await web3.eth.sendTransaction(tx);
 };
 
+// Ethers.js implementation - For use with MetaMask
+export const getRefundEthers = async (numTickets, signer) => {
+  const contract = getEthersContract(signer);
+  const tx = await contract.getRefund(numTickets);
+  return await tx.wait();
+};
+
+// Web3.js implementation - For use with Keystore wallet
 export const returnTicket = async (numTickets, account) => {
   const contract = getContract();
   const data = contract.methods.returnTicket(numTickets).encodeABI();
@@ -631,90 +629,16 @@ export const returnTicket = async (numTickets, account) => {
   return await web3.eth.sendTransaction(tx);
 };
 
-export const transfer = async (recipient, amount, account) => {
-  const contract = getContract();
-  const data = contract.methods.transfer(recipient, amount).encodeABI();
-  
-  const tx = {
-    from: account.address,
-    to: contractAddress,
-    gas: 200000,
-    data: data
-  };
-  
-  const web3 = web3Provider.getWeb3();
-  return await web3.eth.sendTransaction(tx);
-};
-
-export const approve = async (spender, amount, account) => {
-  const contract = getContract();
-  const data = contract.methods.approve(spender, amount).encodeABI();
-  
-  const tx = {
-    from: account.address,
-    to: contractAddress,
-    gas: 200000,
-    data: data
-  };
-  
-  const web3 = web3Provider.getWeb3();
-  return await web3.eth.sendTransaction(tx);
-};
-
-export const transferFrom = async (sender, recipient, amount, account) => {
-  const contract = getContract();
-  const data = contract.methods.transferFrom(sender, recipient, amount).encodeABI();
-  
-  const tx = {
-    from: account.address,
-    to: contractAddress,
-    gas: 200000,
-    data: data
-  };
-  
-  const web3 = web3Provider.getWeb3();
-  return await web3.eth.sendTransaction(tx);
-};
-
-// Ethers.js versions of the write functions
+// Ethers.js implementation - For use with MetaMask
 export const returnTicketEthers = async (numTickets, signer) => {
   const contract = getEthersContract(signer);
   const tx = await contract.returnTicket(numTickets);
   return await tx.wait();
 };
 
-export const buyTicketEthers = async (numTickets, signer, valueInEther) => {
-  const contract = getEthersContract(signer);
-  const valueInWei = ethers.parseEther(valueInEther.toString());
-  const tx = await contract.buyTicket(numTickets, { value: valueInWei });
-  return await tx.wait();
-};
 
-export const getRefundEthers = async (numTickets, signer) => {
-  const contract = getEthersContract(signer);
-  const tx = await contract.getRefund(numTickets);
-  return await tx.wait();
-};
 
-export const transferEthers = async (recipient, amount, signer) => {
-  const contract = getEthersContract(signer);
-  const tx = await contract.transfer(recipient, amount);
-  return await tx.wait();
-};
-
-export const approveEthers = async (spender, amount, signer) => {
-  const contract = getEthersContract(signer);
-  const tx = await contract.approve(spender, amount);
-  return await tx.wait();
-};
-
-export const transferFromEthers = async (sender, recipient, amount, signer) => {
-  const contract = getEthersContract(signer);
-  const tx = await contract.transferFrom(sender, recipient, amount);
-  return await tx.wait();
-};
-
-// Helper for getting past events
+// Used to identify addresses with balances for displaying in the UI
 export const getPastTransferEvents = async () => {
   const contract = getContract();
   return await contract.getPastEvents('Transfer', {
@@ -723,23 +647,6 @@ export const getPastTransferEvents = async () => {
   });
 };
 
-// Helper for getting ticket purchase events
-export const getPastTicketPurchasedEvents = async () => {
-  const contract = getContract();
-  return await contract.getPastEvents('TicketPurchased', {
-    fromBlock: 0,
-    toBlock: 'latest'
-  });
-};
-
-// Helper for getting ticket refund events
-export const getPastTicketRefundedEvents = async () => {
-  const contract = getContract();
-  return await contract.getPastEvents('TicketRefunded', {
-    fromBlock: 0,
-    toBlock: 'latest'
-  });
-};
 
 // Wallet role verification utilities
 export const WALLET_ROLES = {
@@ -748,40 +655,28 @@ export const WALLET_ROLES = {
   CUSTOMER: 'customer', // Default role for non-special wallets
 };
 
-export const AUTHORIZED_HASHES = {
-  [process.env.REACT_APP_VENUE_HASH]: WALLET_ROLES.VENUE,
-  [process.env.REACT_APP_DOORMAN_HASH]: WALLET_ROLES.DOORMAN,
+
+export const getWalletRole = async (address ) => {
+  if (!address) return WALLET_ROLES.CUSTOMER;
+  
+  try {
+    const venueAddress = await getVenueAddress();
+    if (address.toLowerCase() === venueAddress.toLowerCase()) {
+      return WALLET_ROLES.VENUE;
+    }
+    
+    const doormanAddress = await getDoormanAddress();
+    if (address.toLowerCase() === doormanAddress.toLowerCase()) {
+      return WALLET_ROLES.DOORMAN;
+    }
+  } catch (error) {
+    console.error("Error determining wallet role:", error);
+  }
+  return WALLET_ROLES.CUSTOMER;
 };
 
-/**
- * Hashes a wallet address using SHA-256
- * @param {string} address - The wallet address to hash
- * @returns {string} The SHA-256 hash of the address
- */
-export const hashWalletAddress = (address) => {
-  if (!address) return '';
-  return CryptoJS.SHA256(address.trim().toLowerCase()).toString();
-};
-
-/**
- * Gets the role of a wallet address
- * @param {string} address - The wallet address to check
- * @returns {string|null} The role of the wallet or null if it's not a special wallet
- */
-export const getWalletRole = (address) => {
-  if (!address) return null;
-  const hashedAddress = hashWalletAddress(address);
-  return AUTHORIZED_HASHES[hashedAddress] || WALLET_ROLES.CUSTOMER;
-};
-
-/**
- * Checks if a wallet address is one of the specified roles
- * @param {string} address - The wallet address to check
- * @param {string|string[]} roles - A single role or array of roles to check against
- * @returns {boolean} True if the wallet is one of the specified roles
- */
-export const isWalletRole = (address, roles) => {
-  const walletRole = getWalletRole(address);
+export const isWalletRole = async (address , roles ) => {
+  const walletRole = await getWalletRole(address);
   
   // If roles is a string, convert it to an array for consistent processing
   const rolesToCheck = typeof roles === 'string' ? [roles] : roles;
@@ -789,11 +684,82 @@ export const isWalletRole = (address, roles) => {
   return rolesToCheck.includes(walletRole);
 };
 
-/**
- * Checks if a wallet address is a special wallet (venue or doorman)
- * @param {string} address - The wallet address to check
- * @returns {boolean} True if the wallet is a special wallet
- */
-export const isSpecialWallet = (address) => {
-  return isWalletRole(address, [WALLET_ROLES.VENUE, WALLET_ROLES.DOORMAN]);
+export const isSpecialWallet = async (address ) => {
+  return await isWalletRole(address, [WALLET_ROLES.VENUE, WALLET_ROLES.DOORMAN]);
+};
+
+// Web3.js implementation - For use with Keystore wallet
+export const updateTicketPrice = async (newPriceEth, account) => {
+  const contract = getContract();
+  const newPriceWei = web3Provider.toWei(newPriceEth);
+  const data = contract.methods.updateTicketPrice(newPriceWei).encodeABI();
+  
+  const tx = {
+    from: account.address,
+    to: contractAddress,
+    gas: 200000,
+    data: data
+  };
+  
+  const web3 = web3Provider.getWeb3();
+  return await web3.eth.sendTransaction(tx);
+};
+
+// Ethers.js implementation - For use with MetaMask
+export const updateTicketPriceEthers = async (newPriceEth, signer) => {
+  const contract = getEthersContract(signer);
+  const newPriceWei = ethers.parseEther(newPriceEth.toString());
+  const tx = await contract.updateTicketPrice(newPriceWei);
+  return await tx.wait();
+};
+
+// Web3.js implementation - For use with Keystore wallet
+export const withdrawFunds = async (amountEth, account) => {
+  const contract = getContract();
+  const amountWei = web3Provider.toWei(amountEth);
+  const data = contract.methods.withdrawFunds(amountWei).encodeABI();
+  
+  const tx = {
+    from: account.address,
+    to: contractAddress,
+    gas: 200000,
+    data: data
+  };
+  
+  const web3 = web3Provider.getWeb3();
+  return await web3.eth.sendTransaction(tx);
+};
+
+// Ethers.js implementation - For use with MetaMask
+export const withdrawFundsEthers = async (amountEth, signer) => {
+  const contract = getEthersContract(signer);
+  const amountWei = ethers.parseEther(amountEth.toString());
+  const tx = await contract.withdrawFunds(amountWei);
+  return await tx.wait();
+};
+
+// Web3.js implementation - For use with Keystore wallet
+export const depositFunds = async (amountEth, account) => {
+  const contract = getContract();
+  const amountWei = web3Provider.toWei(amountEth);
+  const data = contract.methods.depositFunds().encodeABI();
+  
+  const tx = {
+    from: account.address,
+    to: contractAddress,
+    gas: 200000,
+    value: amountWei,
+    data: data
+  };
+  
+  const web3 = web3Provider.getWeb3();
+  return await web3.eth.sendTransaction(tx);
+};
+
+// Ethers.js implementation - For use with MetaMask
+export const depositFundsEthers = async (amountEth, signer) => {
+  const contract = getEthersContract(signer);
+  const amountWei = ethers.parseEther(amountEth.toString());
+  const tx = await contract.depositFunds({ value: amountWei });
+  return await tx.wait();
 };

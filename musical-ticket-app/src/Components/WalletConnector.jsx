@@ -5,6 +5,7 @@ import NotificationModal from './NotificationModal';
 import { PasswordInput, ActionButton } from '../Pages/CreateWallet';
 import { getWalletRole } from '../Utils/common';
 import ethersProvider from '../Utils/ethersProvider';
+
 const FileInput = styled(PasswordInput)`
   padding: 10px;
 `;
@@ -69,8 +70,8 @@ function WalletConnector({
       const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
       const address = accounts[0];
       
-      // Check if the wallet is a special role using our common utility
-      const role = getWalletRole(address);
+      // Check if the wallet is a special role using our common utility - IMPORTANT: add await here
+      const role = await getWalletRole(address);
       
       if (role && disallowedRoles.includes(role)) {
         setNotification({
@@ -82,8 +83,9 @@ function WalletConnector({
         return;
       }
       
-      // Create a BrowserProvider to interact with MetaMask
-       const signer = await ethersProvider.getSigner();
+      // Use window.ethereum directly to create a provider
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
       
       // Create wallet info object
       const walletInfo = {
@@ -95,7 +97,11 @@ function WalletConnector({
       
       // Get balance if required
       if (getBalanceAfterConnect && getBalanceOf) {
-        balance = await getBalanceOf(address);
+        try {
+          balance = await getBalanceOf(address);
+        } catch (error) {
+          console.error("Error fetching balance:", error);
+        }
       }
       
       // Pass the connected wallet back to parent
@@ -145,8 +151,8 @@ function WalletConnector({
         try {
           const decryptedWallet = await ethers.Wallet.fromEncryptedJson(event.target.result, password);
           
-          // Check if the wallet is a special role using our common utility
-          const role = getWalletRole(decryptedWallet.address);
+          // Check if the wallet is a special role - IMPORTANT: add await here
+          const role = await getWalletRole(decryptedWallet.address);
           
           if (role && disallowedRoles.includes(role)) {
             setNotification({
@@ -168,7 +174,11 @@ function WalletConnector({
           
           // Get balance if required
           if (getBalanceAfterConnect && getBalanceOf) {
-            balance = await getBalanceOf(decryptedWallet.address);
+            try {
+              balance = await getBalanceOf(decryptedWallet.address);
+            } catch (error) {
+              console.error("Error fetching balance:", error);
+            }
           }
           
           // Pass the connected wallet back to parent

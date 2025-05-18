@@ -1,11 +1,10 @@
-import React, { useState, useRef } from 'react';
-import { ethers, BrowserProvider } from 'ethers';
+import { useState, useRef } from 'react';
 import styled from 'styled-components';
 import NotificationModal from '../Components/NotificationModal';
 import DetailsBox from '../Components/DetailsBox';
 import WalletConnector from '../Components/WalletConnector';
 import { PageTitle, SubTitle, ActionButton } from './CreateWallet';
-import { ABI, contractAddress, getBalanceOf, returnTicket, returnTicketEthers } from '../Utils/common';
+import {getBalanceOf, returnTicket, returnTicketEthers } from '../Utils/common';
 import web3Provider from '../Utils/web3Provider';
 import ethersProvider from '../Utils/ethersProvider';
 import { TicketInfo, TicketSection } from './BuyTicket';

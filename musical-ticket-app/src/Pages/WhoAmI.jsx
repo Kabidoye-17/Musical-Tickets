@@ -1,8 +1,5 @@
-import React from 'react';
-import styled from 'styled-components';
 import { PageTitle } from './CreateWallet';
 import { ActionButton, PasswordInput } from './CreateWallet';
-import Web3 from 'web3';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import NotificationModal from '../Components/NotificationModal';
@@ -10,11 +7,6 @@ import { getWalletRole } from '../Utils/common';
 
 function WhoAmI() {
 
-    console.log("Environment variables:", {
-        venueHash: process.env.REACT_APP_VENUE_HASH,
-        doormanHash: process.env.REACT_APP_DOORMAN_HASH
-    });
-    
     const [walletAddress, setWalletAddress] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [notification, setNotification] = useState("");
@@ -26,12 +18,12 @@ function WhoAmI() {
         setShowNotification(false);
     }
 
-    const redirectToViewWallet = (walletAddress) => {
+    const redirectToViewWallet = async (walletAddress) => {
         setIsLoading(true);
 
         try {
-            // Use the common utility to get the wallet role
-            const role = getWalletRole(walletAddress);
+            // Use the common utility to get the wallet role - now with await
+            const role = await getWalletRole(walletAddress);
 
             if (role && role !== 'customer') {
                 nav(`/view-wallet-${role}`, { state: { walletAddress: walletAddress }});

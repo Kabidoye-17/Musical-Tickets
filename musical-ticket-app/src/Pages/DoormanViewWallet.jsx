@@ -1,6 +1,6 @@
 import DetailsBox from '../Components/DetailsBox';
 import NotificationModal from '../Components/NotificationModal';
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { ActionButton, PageTitle, PasswordInput, SubTitle} from './CreateWallet';
 import { Ticket, Check, X } from "@phosphor-icons/react";
@@ -44,19 +44,21 @@ const StatusMessage = styled.h2`
 function DoormanViewWallet() {
     const location = useLocation();
     const doormanWallet = location.state?.walletAddress;
-    const [walletAddress, setWalletAddress] = useState("");
+    const [customerWalletAddress, setCustomerWalletAddress] = useState("");
     const [showNotification, setShowNotification] = useState(false);
     const [notification, setNotification] = useState({ success: false, message: "" });
     const [ticketBalance, setTicketBalance] = useState("-");
     const [isLoading, setIsLoading] = useState(false);
-    const [verificationStatus, setVerificationStatus] = useState(null); // null, true, or false
+    const [verificationStatus, setVerificationStatus] = useState(null); 
     
     // Check if doorman wallet exists on component mount
     useEffect(() => {
+        // Checks to ensure that only the doorman can access this page
         if (!doormanWallet) {
             setNotification({ success: false, message: "Doorman wallet not found. Please log in again." });
             setShowNotification(true);
-        } else if (!isWalletRole(doormanWallet, WALLET_ROLES.DOORMAN)) {
+        } 
+        else if (!isWalletRole(doormanWallet, WALLET_ROLES.DOORMAN)) {
             setNotification({ 
                 success: false, 
                 message: "This wallet does not have doorman permissions." 
@@ -65,17 +67,18 @@ function DoormanViewWallet() {
         }
     }, [doormanWallet]);
 
-    const getTicketBalance = async (walletAddress) => {
+    const getTicketBalance = async (customerWalletAddress) => {
         // Validate wallet address
-        if (!walletAddress || !web3Provider.isValidAddress(walletAddress)) {
+        if (!customerWalletAddress || !web3Provider.isValidAddress(customerWalletAddress)) {
             setNotification({ success: false, message: "Please enter a valid wallet address" });
             setShowNotification(true);
             setVerificationStatus(null);
             return;
         }
         
-        // Check if the address is a special role (venue or doorman) using our common utility
-        if (isSpecialWallet(walletAddress)) {
+        // Check if the address is a special wallet (venue or doorman)
+        // These cannot be checked, only the customer wallets
+        if (isSpecialWallet(customerWalletAddress)) {
             setNotification({ 
                 success: false, 
                 message: "Cannot check balance of venue or doorman wallets."
@@ -90,13 +93,16 @@ function DoormanViewWallet() {
         
         try {
             // Use the helper function instead of direct contract call
-            const balance = await getBalanceOf(walletAddress);
+            const balance = await getBalanceOf(customerWalletAddress);
             setTicketBalance(balance);
             
             // Verify if the wallet has at least one ticket (balance > 0)
             const hasTicket = Number(balance) > 0;
             setVerificationStatus(hasTicket);
             
+            // Set notification as to whether they can be admitted or not
+            // If the balance is greater than 0, the customer can be admitted
+            // If the balance is 0, the customer cannot be admitted
             if (hasTicket) {
                 setNotification({ 
                     success: true, 
@@ -131,11 +137,11 @@ function DoormanViewWallet() {
         <PasswordInput
             type="text"
             placeholder="Enter customer's wallet address"
-            value={walletAddress}
-            onChange={(e) => setWalletAddress(e.target.value)}
+            value={customerWalletAddress}
+            onChange={(e) => setCustomerWalletAddress(e.target.value)}
         />
 
-        <ActionButton onClick={() => getTicketBalance(walletAddress)} disabled={isLoading}>
+        <ActionButton onClick={() => getTicketBalance(customerWalletAddress)} disabled={isLoading}>
             {isLoading ? "Verifying..." : "Verify Ticket"}
         </ActionButton>
 

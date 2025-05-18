@@ -1,14 +1,15 @@
-import{ useState } from 'react';
+import { useState } from 'react';
 import styled from 'styled-components';
+
 import NotificationModal from '../Components/NotificationModal';
 import DetailsBox from '../Components/DetailsBox';
 import WalletConnector from '../Components/WalletConnector';
 import WarningBox from '../Components/WarningBox';
-import { PageTitle, SubTitle, ActionButton} from './CreateWallet';
-import {buyTicket, buyTicketEthers } from '../Utils/common';
+import { PageTitle, SubTitle, ActionButton } from './CreateWallet';
+
+import { buyTicket, buyTicketEthers, getTicketPrice } from '../Utils/common';
 import web3Provider from '../Utils/web3Provider';
 import ethersProvider from '../Utils/ethersProvider';
-
 
 export const TicketSection = styled.div`
   display: flex;
@@ -44,7 +45,8 @@ export const QuantityButton = styled.button`
   }
 `;
 
-function BuyTicket()  {
+function BuyTicket() {
+  // State variables
   const [walletInfo, setWalletInfo] = useState(null);
   const [wallet, setWallet] = useState(null);
   const [isPurchasing, setIsPurchasing] = useState(false);
@@ -53,10 +55,13 @@ function BuyTicket()  {
   const [ticketQuantity, setTicketQuantity] = useState(1);
   const [connectionMethod, setConnectionMethod] = useState('keystore');
   
-  // Ticket price from contract (0.01 ETH)
-  const ticketPrice = 0.01;
+  // get the ticket price from the contract as it can change
+  const ticketPrice = getTicketPrice();
 
-  // Handle wallet connection from WalletConnector
+  // Acts as a callback function to handle wallet connection
+  // sets the method of connection (metamask or keystore)
+  // and sets the wallet info and wallet object
+  // Determines how to send the transaction based on the connection method
   const handleWalletConnected = (walletInfo, walletOrSigner, method) => {
     setWalletInfo(walletInfo);
     setWallet(walletOrSigner);
@@ -64,6 +69,7 @@ function BuyTicket()  {
   };
 
   const buyTickets = async () => {
+    // You need a wallet to buy tickets
     if (!wallet) {
       setNotification({
         success: false,
@@ -72,27 +78,30 @@ function BuyTicket()  {
       setShowNotification(true);
       return;
     }
-
+    
+    // Set the purchasing state to true to indicate transaction is in progress
+    // prevents multiple transactions from being sent at once
     setIsPurchasing(true);
 
     try {
+      // Calculate the total price in ETH
+      const totalPrice = ticketPrice * ticketQuantity;
+      
+      // Buying a ticket using metamask
       if (connectionMethod === 'metamask') {
-        // Use our ethersProvider singleton to get a signer
         const signer = await ethersProvider.getSigner();
-        const receipt = await buyTicketEthers(ticketQuantity, signer, ticketPrice * ticketQuantity);
+        const receipt = await buyTicketEthers(ticketQuantity, signer, totalPrice);
         
         setNotification({
           success: true,
           message: `Successfully purchased ${ticketQuantity} ticket(s)! Transaction hash: ${receipt.hash ? receipt.hash : "Check your wallet for the transaction."}`
         });
-      } else {
-        // Use the web3Provider helper to create an account properly
+      } 
+      
+      // Buying a ticket using a keystore
+      else {
         const account = web3Provider.createAccount(wallet.privateKey);
-        
-        // Calculate the total price in wei
-        const totalPriceWei = web3Provider.toWei(ticketPrice * ticketQuantity);
-        
-        // Use our helper function
+        const totalPriceWei = web3Provider.toWei(totalPrice);
         const receipt = await buyTicket(ticketQuantity, account, totalPriceWei);
         
         setNotification({
@@ -102,13 +111,16 @@ function BuyTicket()  {
       }
       
       setShowNotification(true);
-    } catch (error) {
+    } 
+    // Handle errors during the transaction
+    catch (error) {
       setNotification({
         success: false,
         message: `Failed to purchase tickets: ${error.message}. Please check your wallet balance and try again.`
       });
       setShowNotification(true);
     } finally {
+      // Reset the purchasing state when transaction completes (success or failure)
       setIsPurchasing(false);
     }
   };
@@ -116,6 +128,7 @@ function BuyTicket()  {
   const closeNotification = () => {
     setShowNotification(false);
   };
+
 
   return (
     <>
@@ -162,7 +175,6 @@ function BuyTicket()  {
             
             <TicketInfo>Total Cost: {ticketPrice * ticketQuantity} ETH</TicketInfo>
             
-           
             <ActionButton 
               onClick={buyTickets}
               disabled={isPurchasing}

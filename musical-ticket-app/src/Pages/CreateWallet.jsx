@@ -1,6 +1,6 @@
 import DetailsBox from '../Components/DetailsBox';
 import NotificationModal from '../Components/NotificationModal';
-import React, { useState } from 'react';
+import{ useState } from 'react';
 import styled from 'styled-components';
 import web3Provider from '../Utils/web3Provider';
 
@@ -57,6 +57,7 @@ function CreateWallet() {
     const [notification, setNotification] = useState({ success: false, message: "" });
 
     const handleCreateWallet = async () => {
+        // Validate password meets minimum requirements
         if (password.trim().length < 3) {
             setNotification({ 
                 success: false, 
@@ -67,10 +68,13 @@ function CreateWallet() {
         }
     
         try {
+            // Create a new Ethereum wallet using web3
             const web3 = web3Provider.getWeb3();
             const wallet = web3.eth.accounts.create();
+            // Encrypt the private key with the user's password to create a keystore file
             const keystore = await web3.eth.accounts.encrypt(wallet.privateKey, password);
     
+            // Update state with the new wallet details
             setWalletAddress(wallet.address);
             setPrivateKey(wallet.privateKey);
             setKeyStoreFile(keystore);
@@ -80,6 +84,7 @@ function CreateWallet() {
             });
             setShowNotification(true);
         } catch (error) {
+            // Handle any errors during wallet creation
             setNotification({ 
                 success: false, 
                 message: "Uh oh there was an issue: " + error.message 
@@ -88,11 +93,8 @@ function CreateWallet() {
         }
     };
     
-    const closeNotification = () =>{
-        setShowNotification(false);
-    }
-    
     const downloadKeystore = () => {
+        // Verify keystore exists before attempting download
         if (!keyStoreFile || Object.keys(keyStoreFile).length === 0) {
             setNotification({ 
                 success: false, 
@@ -102,17 +104,25 @@ function CreateWallet() {
             return;
         };
     
+        // Format the keystore as a properly indented JSON string
         const json = JSON.stringify(keyStoreFile, null, 2);
+        // Create a downloadable blob from the JSON
         const blob = new Blob([json], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
     
+        // Create and trigger a temporary download link
         const link = document.createElement('a');
         link.href = url;
         link.download = 'keystore.json'; 
         document.body.appendChild(link);
         link.click();
+        // Clean up by removing the link and revoking the URL
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
+    }
+
+      const closeNotification = () =>{
+        setShowNotification(false);
     }
     return (
         <>

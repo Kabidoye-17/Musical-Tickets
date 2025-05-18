@@ -13,10 +13,8 @@ function PurchaserViewWallet() {
     const [showNotification, setShowNotification] = useState(false);
     const [ticketBalance, setTicketBalance] = useState("-");
     const [cryptoBalance, setCryptoBalance] = useState("-");
-    const [isLoading, setIsLoading] = useState(false);
 
 
-    
     useEffect(() => {
         // Skip if no wallet address is provided
         if (!walletAddress) {
@@ -28,13 +26,14 @@ function PurchaserViewWallet() {
             return;
         }
 
+        // Wallet must be a valid address
         if (web3Provider.isValidAddress(walletAddress)) {
-            setIsLoading(true);
             
             // Fetch ETH balance
             const web3 = web3Provider.getWeb3();
             web3.eth.getBalance(walletAddress)
-                .then(function(balance) {                    
+                .then(function(balance) {               
+                    // Convert balance from Wei to Ether     
                     const balanceInEther = web3Provider.fromWei(balance);
                     setCryptoBalance(balanceInEther);
                     
@@ -51,9 +50,7 @@ function PurchaserViewWallet() {
                     });
                     setShowNotification(true);
                 })
-                .finally(() => {
-                    setIsLoading(false);
-                });
+                
         } else {
             setNotification({ 
                 success: false, 
