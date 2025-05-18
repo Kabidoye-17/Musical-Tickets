@@ -28,6 +28,7 @@ A smart contract-based ticketing application built with React and Ethers.js. Thi
    ```bash
    git clone https://github.com/Kabidoye-17/Musical-Tickets.git
    cd Musical-Tickets
+   cd musical-ticket-app
 2. **Run npm install to install of all of the dependencies**
 	```
 	 npm install
@@ -40,3 +41,4 @@ A smart contract-based ticketing application built with React and Ethers.js. Thi
 
 ## Configurations
 The code is currently set to work with my contract address and ABI but feel free to use my smart contract definition to create your own/
+
