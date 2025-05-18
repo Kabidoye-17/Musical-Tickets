@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 
 import NotificationModal from '../Components/NotificationModal';
@@ -57,14 +57,18 @@ function BuyTicket() {
   const [ticketPrice, setTicketPrice] = useState(0);
   
   // get the ticket price from the contract as it can change
-  const getTicketPrice = async () => {
-    try {
-      const priceEth = await getTicketPrice();
-      setTicketPrice(parseFloat(priceEth));
-    } catch (error) { 
-      console.error("Error fetching ticket price:", error);
-  }
-};
+  // Fetch ticket price when component mounts
+  useEffect(() => {
+    const fetchTicketPrice = async () => {
+      try {
+        const priceEth = await getTicketPrice();
+        setTicketPrice(parseFloat(priceEth));
+      } catch (error) { 
+        console.error("Error fetching ticket price:", error);
+      }
+    };
+    fetchTicketPrice();
+  }, []);
 
   // Acts as a callback function to handle wallet connection
   // sets the method of connection (metamask or keystore)

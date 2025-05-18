@@ -4,7 +4,6 @@ import styled from 'styled-components';
 import NotificationModal from './NotificationModal';
 import { PasswordInput, ActionButton } from '../Pages/CreateWallet';
 import { getWalletRole } from '../Utils/common';
-import ethersProvider from '../Utils/ethersProvider';
 
 const FileInput = styled(PasswordInput)`
   padding: 10px;
