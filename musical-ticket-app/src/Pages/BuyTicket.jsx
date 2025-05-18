@@ -54,9 +54,17 @@ function BuyTicket() {
   const [showNotification, setShowNotification] = useState(false);
   const [ticketQuantity, setTicketQuantity] = useState(1);
   const [connectionMethod, setConnectionMethod] = useState('keystore');
+  const [ticketPrice, setTicketPrice] = useState(0);
   
   // get the ticket price from the contract as it can change
-  const ticketPrice = getTicketPrice();
+  const getTicketPrice = async () => {
+    try {
+      const priceEth = await getTicketPrice();
+      setTicketPrice(parseFloat(priceEth));
+    } catch (error) { 
+      console.error("Error fetching ticket price:", error);
+  }
+};
 
   // Acts as a callback function to handle wallet connection
   // sets the method of connection (metamask or keystore)
